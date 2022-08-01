@@ -8,7 +8,7 @@ In the case of this project, CIBERSORTx takes single cell RNA-seq expression dat
 
 Then, this signature matrix can be applied to bulk RNA-seq data to deconvolve the cell type proportions in bulk cell mixtures.
 
-Links:
+### Links:
 - [CIBERSORTx website](https://cibersortx.stanford.edu/)
 - CIBERSORT foundational paper, [Newman et al. 2015](https://www.nature.com/articles/nmeth.3337#Sec10)
 - CIBERSORTx paper, which includes support for single cell RNA-seq, [Newman et al. 2019](https://www.nature.com/articles/s41587-019-0114-2#MOESM1)

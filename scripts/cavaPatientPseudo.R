@@ -10,7 +10,7 @@ library(Metrics)
 library(reshape)
 library(scales)
 
-cava <- as.sparse(read.csv("/Users/jmakings/Desktop/CAVA_Data/raw/raw.csv", sep=",", header = TRUE, row.names = 1))
+cava <- as.sparse(read.csv("/Users/jmakings/Desktop/CibersortX/raw/raw.csv", sep=",", header = TRUE, row.names = 1))
 cava <- CollapseSpeciesExpressionMatrix(cava)
 cava <- as.data.frame(t(as.matrix(cava)))
 
@@ -36,7 +36,7 @@ seuratcava <- CreateSeuratObject(counts = cava2)
 counts <- seuratcava@assays$RNA@counts
 
 # load in metadata (with myeloid splits) 
-metaDF <- data.frame(read.csv("/Users/jmakings/Desktop/CAVA_Data/raw/final_metadata_myeloid.csv", sep=",", header = TRUE, row.names = 1))
+metaDF <- data.frame(read.csv("/Users/jmakings/Desktop/CibersortX/raw/final_metadata_myeloid.csv", sep=",", header = TRUE, row.names = 1))
 seuratcava@meta.data <- metaDF
 
 # restart from here, except MERGE like in CAVA_pseduo_myeloid split instead
@@ -82,7 +82,7 @@ ssCava <- ssCava[, colSums(ssCava != 0) > 0 ]
 ssCava <- ssCava[rowSums(ssCava != 0) > 0,]
 
 # this is to create single cell reference matrix 
-write.table(ssCava, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/allgenesCAVA.txt", 
+write.table(ssCava, "/Users/jmakings/Desktop/CibersortX/InputFiles/allgenesCAVA.txt", 
             sep = "\t", col.names = FALSE, row.names = TRUE)
 
 # this section to create pseudobulk for each patient
@@ -98,7 +98,7 @@ cava6gt %>% row_to_names(row_number = 1) -> cava7
 row.names(cava6gt)[1] <- "Gene"
 
 # this file converts the counts to cpm before creating pseudobulk
-write.table(cava6gt, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/cavaPatientsLarge.txt", 
+write.table(cava6gt, "/Users/jmakings/Desktop/CibersortX/InputFiles/cavaPatientsLarge.txt", 
             sep = "\t", col.names = FALSE, row.names = TRUE)
 
 # now convert the pseudo
@@ -131,10 +131,10 @@ trueVals <- tabyl_to_decimal(trueVals)
 # calculate RMSE between real and predicted
 
 # this one with batch correction (B-mode)
-preds <- as.data.frame(read.csv("/Users/jmakings/Desktop/CAVA_Data/fractionsFiles/CIBERSORTx_Job151_Results.csv", header = TRUE, row.names = 1))
+preds <- as.data.frame(read.csv("/Users/jmakings/Desktop/CibersortX/fractionsFiles/CIBERSORTx_Job151_Results.csv", header = TRUE, row.names = 1))
 
 # this one without batch correction
-preds2 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CAVA_Data/fractionsFiles/CIBERSORTx_Job150_Results.csv", header = TRUE, row.names = 1))
+preds2 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CibersortX/fractionsFiles/CIBERSORTx_Job150_Results.csv", header = TRUE, row.names = 1))
  
 # RMSE with actual and predicted dataframes
 mse_summary <- function(actual, predict) {
@@ -260,7 +260,7 @@ heat1 <- maeHeat(mae, "White", "Red", "CIBERSORTx Mean Absolute Error\n on CAVA 
 # then, test on 74 genes
 # single cell file
 
-genes74 <- as.sparse(read.csv("/Users/jmakings/Desktop/CAVA_Data/InputFiles/deletedgenes.csv", sep=",", header = TRUE, row.names = 1))
+genes74 <- as.sparse(read.csv("/Users/jmakings/Desktop/CibersortX/InputFiles/deletedgenes.csv", sep=",", header = TRUE, row.names = 1))
 genes74 <- as.data.frame(genes74)
 
 GeneList <- rownames(genes74)
@@ -276,7 +276,7 @@ cava74ss <- cava74ss[, colSums(cava74ss != 0) > 0 ]
 # remove rows with all zeros
 cava74ss <- cava74ss[rowSums(cava74ss != 0) > 0,]
 
-write.table(cava74ss, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/cava74ssNew.txt", sep = "\t", col.names = FALSE, row.names = TRUE)
+write.table(cava74ss, "/Users/jmakings/Desktop/CibersortX/InputFiles/cava74ssNew.txt", sep = "\t", col.names = FALSE, row.names = TRUE)
 
 # pseudobulk file
 
@@ -289,21 +289,21 @@ cava6g$Pat_ID <- sub("^", "P", cava6g$Pat_ID)
 cava74gt <- as.data.frame(t(cava74g))
 row.names(cava74gt)[1] <- "Gene"
 
-write.table(cava74gt, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/cava74pseudoNoNormal.txt", sep = "\t", col.names = FALSE, row.names = TRUE)
+write.table(cava74gt, "/Users/jmakings/Desktop/CibersortX/InputFiles/cava74pseudoNoNormal.txt", sep = "\t", col.names = FALSE, row.names = TRUE)
 
 
 cava74cpm <- counts_To_cpm(row_to_names(cava74gt, row_number = 1))
 cava74cpm <- rbind(colnames(cava74cpm), cava74cpm)
 rownames(cava74cpm)[1] <- "Gene"
 
-write.table(cava74cpm, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/cava74pseudoNormal.txt", sep = "\t", col.names = FALSE, row.names = TRUE)
+write.table(cava74cpm, "/Users/jmakings/Desktop/CibersortX/InputFiles/cava74pseudoNormal.txt", sep = "\t", col.names = FALSE, row.names = TRUE)
 
-preds3 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CAVA_Data/fractionsFiles/CIBERSORTx_Job153_Results.csv", header = TRUE, row.names = 1))
+preds3 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CibersortX/fractionsFiles/CIBERSORTx_Job153_Results.csv", header = TRUE, row.names = 1))
 
-preds4 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CAVA_Data/fractionsFiles/CIBERSORTx_Job154_Results.csv", header = TRUE, row.names = 1))
+preds4 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CibersortX/fractionsFiles/CIBERSORTx_Job154_Results.csv", header = TRUE, row.names = 1))
 mse_myeloid(trueVals,preds3)
 
-mse_myeloid(trueVals,preds4)
+mse_summary(trueVals,preds4)
 # normalizing the bulk data to counts per million has no effect on the model
 
 mae74 <- mae_perPatient(trueVals,preds4)
@@ -329,7 +329,7 @@ sscavaM <- sscavaM[rowSums(sscavaM != 0) > 0,]
 row.names(sscavaM)[1] <- "GeneSymbol"
 
 # this is to create single cell reference matrix 
-write.table(sscavaM, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/allgenesCAVAmyeloid.txt", 
+write.table(sscavaM, "/Users/jmakings/Desktop/CibersortX/InputFiles/allgenesCAVAmyeloid.txt", 
             sep = "\t", col.names = FALSE, row.names = TRUE)
 
 # create myeloid Pseudobulk
@@ -342,17 +342,17 @@ cavamB %>% group_by(Pat_ID) %>% summarise_if(is.numeric, funs(sum)) -> cavamGrou
 cavamGroup <- as.data.frame(t(cavamGroup))
 row.names(cavamGroup)[1] <- "Gene"
 
-write.table(cavamGroup, "/Users/jmakings/Desktop/CAVA_Data/InputFiles/allgenesCAVAmyeloidpseudo.txt", 
+write.table(cavamGroup, "/Users/jmakings/Desktop/CibersortX/InputFiles/allgenesCAVAmyeloidpseudo.txt", 
             sep = "\t", col.names = FALSE, row.names = TRUE)
 
 
-# evaluation of CAVA matrix trained on full dataset but only given 74 genes during testing
+ # evaluation of CAVA matrix trained on full dataset but only given 74 genes during testing
 
-preds5 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CAVA_Data/fractionsFiles/CIBERSORTx_Job157_Results.csv", header = TRUE, row.names = 1))
+preds5 <- as.data.frame(read.csv("/Users/jmakings/Desktop/CibersortX/fractionsFiles/CIBERSORTx_Job157_Results.csv", header = TRUE, row.names = 1))
 
-mse_myeloid(trueVals, preds5)
+mse_summary(trueVals, preds5)
 
-mse_myeloid(trueVals, preds2)
+mse_summary(trueVals, preds2)
 
 heat3 <- maeHeat(mae_perPatient(trueVals,preds5), "white","red", "CIBERSORTx model trained with \nall CAVA genes, tested on\n CAVA with just 74 genes")
 heat1 + heat2 + heat3
