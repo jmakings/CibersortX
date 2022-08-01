@@ -1,6 +1,6 @@
 # CibersortX Whole Blood Deconvolution
 
-## The goal of this project is to deconvolve the relative proportions of different Peripheral Blood Mononuclear Cells (PBMC) from whole blood bulk RNA-seq samples using the CIBERSORTx analytical framework for the Ley Lab at the La Jolla Institute for Immunology.
+## Deconvolution of relative proportions of Peripheral Blood Mononuclear Cells (PBMC) from whole blood bulk RNA-seq samples using the CIBERSORTx analytical framework. Work done for the Ley Lab at the La Jolla Institute for Immunology.
 
 In this repo contains the various R scripts for pre-processing of single cell and bulk RNA-seq data for use with the CIBERSORTx framework. 
 
