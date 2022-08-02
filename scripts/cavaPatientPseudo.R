@@ -363,10 +363,28 @@ summary74 <- mse_summary(trueVals, preds)
 
 # next: Try this out on JUST myeloid cells
 
+pearson <- function(actual, predict) {
+  types <- colnames(actual)
+  types <- types[types != "Pat_ID"]
+  sampNames <- row.names(predict)
+  numPreds <- length(row.names(actual))
+  numActual <- length(row.names(predict))
+  if (numActual != numPreds) {
+    print("Error: Number of predictions does not match number of true values")
+    return(NULL)
+  }
+  DF <- as.data.frame(matrix(nrow=1, ncol=length(types)))
+  colnames(DF) <- types
+  for (i in types) {
+    act <- actual[,i]
+    pred <- predict[,i]
+    DF[1,i] <- cor.test(act,pred)[4]
+  }
+  rownames(DF) <- "Pearson's R:"
+  return(DF)
+}
 
-
-
-
+pearson(trueVals,preds5)
 
 
 
