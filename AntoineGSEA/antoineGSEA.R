@@ -15,10 +15,14 @@ library(SingleCellExperiment)
 library('scater')
 library(destiny)
 library(BisqueRNA)
-library('CATALYST')
+#library('CATALYST')
 library(plotly)
 library("scatterplot3d")
 library(monocle)
+library(ComplexHeatmap)
+library(stringr)
+library(reshape)
+library(data.table)
 
 # load in gene signatures matrix for exTreg, Treg, Th1, Tn
 exTregSigs <- as.data.frame(read.csv("/Users/jmakings/Desktop/GSEA_Antoine/Gene_Signatures.gmx", sep="\t",header = TRUE, row.names = 1))
@@ -52,40 +56,42 @@ length(intersect(sort17[1:10],sort7[1:10]))
 # 6 between the top 10
 
 
-# Trajectory analysis for CAVA
+# TRAJECTORY ANALYSIS FOR CAVA
 
-seuratcava@assays$RNA@counts
-DimPlot(object =  seuratcava)
+#This section done wrong, ignore
 
-seuratcava <- FindVariableFeatures(seuratcava)
-seuratcava <- ScaleData(seuratcava)
-seuratcava <- RunPCA(seuratcava)
-seuratcava <- RunUMAP(seuratcava, dims = 1:10)
-DimPlot(seuratcava, reduction='umap')
-
-rna <- read.csv("/Users/jmakings/Desktop/CibersortX/raw/raw.csv", sep="\t",header = TRUE, row.names = 1)
-adt <- read.csv("/Users/jmakings/Desktop/CibersortX/raw/raw_ab.csv", sep="\t",header = TRUE, row.names = 1)
-rna <- CollapseSpeciesExpressionMatrix(rna)
-
-seuratcava <- CreateSeuratObject(counts = rna, project = "CAVA")
-
-adt_assay <- CreateAssayObject(counts = adt)
-seuratcava[['ADT']] <- adt_assay
-
-# perform visualization and clustering steps
-seuratcava <- NormalizeData(seuratcava)
-seuratcava <- FindVariableFeatures(seuratcava)
-seuratcava <- ScaleData(seuratcava)
-seuratcava <- RunPCA(seuratcava, verbose = FALSE)
-seuratcava <- FindNeighbors(seuratcava, dims = 1:30)
-seuratcava <- FindClusters(seuratcava, resolution = 0.8, verbose = FALSE)
-seuratcava <- RunUMAP(seuratcava, dims = 1:30)
-DimPlot(seuratcava, label = TRUE)
+# seuratcava@assays$RNA@counts
+# DimPlot(object =  seuratcava)
+# 
+# seuratcava <- FindVariableFeatures(seuratcava)
+# seuratcava <- ScaleData(seuratcava)
+# seuratcava <- RunPCA(seuratcava)
+# seuratcava <- RunUMAP(seuratcava, dims = 1:10)
+# DimPlot(seuratcava, reduction='umap')
+# 
+# rna <- read.csv("/Users/jmakings/Desktop/CibersortX/raw/raw.csv", sep="\t",header = TRUE, row.names = 1)
+# adt <- read.csv("/Users/jmakings/Desktop/CibersortX/raw/raw_ab.csv", sep="\t",header = TRUE, row.names = 1)
+# rna <- CollapseSpeciesExpressionMatrix(rna)
+# 
+# seuratcava <- CreateSeuratObject(counts = rna, project = "CAVA")
+# 
+# adt_assay <- CreateAssayObject(counts = adt)
+# seuratcava[['ADT']] <- adt_assay
+# 
+# # perform visualization and clustering steps
+# seuratcava <- NormalizeData(seuratcava)
+# seuratcava <- FindVariableFeatures(seuratcava)
+# seuratcava <- ScaleData(seuratcava)
+# seuratcava <- RunPCA(seuratcava, verbose = FALSE)
+# seuratcava <- FindNeighbors(seuratcava, dims = 1:30)
+# seuratcava <- FindClusters(seuratcava, resolution = 0.8, verbose = FALSE)
+# seuratcava <- RunUMAP(seuratcava, dims = 1:30)
+# DimPlot(seuratcava, label = TRUE)
 
 # figure this out later 
 
 
-# Destiny trajectory analysis
+# DESTINY TRAJECTORY ANALYSIS
 
 # importing Sujit's Seurat object
 
@@ -102,7 +108,6 @@ dm <- DiffusionMap(CD4_es, n_pcs = 50)
 plot(dm, 2:3,legend_main = 'Cluster')
 
 destiny1 <- qplot(DC1,DC3,data = dm2)
-
 
 set.seed(2)
 # converting to single cell experiment 
@@ -183,6 +188,8 @@ axx=list(title='DC3')
 axy=list(title='DC2')
 axz=list(title='DC1')
 
+# 3D scatter plot of first 3 DCs 
+
 plotly1 <- plot_ly(x=reduced$dc3, y=reduced$dc2, z=reduced$dc1, type="scatter3d", mode="markers", color=reduced$Cluster,
         marker= list(size =3)) %>% layout(showlegend=TRUE, scene = list(xaxis = list(title = 'DC3'),
                                                    yaxis = list(title = 'DC2'),
@@ -210,3 +217,452 @@ colors <- cbPalette[as.numeric(df2$cluster)]
 scatter1 <- scatterplot3d(x=df2$DC3, y=df2$DC1, z=-df2$DC2, pch=16,color=colors, cex.symbols = 0.34)
 
 plotly1
+
+# 8/12/21 Work on changing clusters to gray
+
+
+grayPalette <- c("gray","gray","gray","gray","gray","gray","gray","gray","blue","gray","gray","gray","gray","gray","red", "gray")
+
+alpha_vec <- vector()
+for (x in CD4_ss$Cluster) {
+  if (x == "CD4T_7" || x == "CD4T_17") {
+    alpha_vec <- append(alpha_vec, 1)
+  }
+  else 
+    alpha_vec <- append(alpha_vec, 0.4)
+}
+
+grayPlot <- ggplot(as.data.frame(colData(CD4_ss)),
+       aes(x = dc1,
+           y = dc2, color = Cluster)) + geom_point(alpha = alpha_vec) + theme_classic() +
+  xlab("DC1") + ylab("DC2") + scale_colour_manual(values=grayPalette) + 
+  scale_fill_manual(values = alpha(alpha_vec)) + 
+  ggtitle("Destiny DC Plot by Cluster")
+grayPlot
+
+alpha_vec2 <- vector()
+for (x in reduced$Cluster) {
+  if (x == "CD4T_7" || x == "CD4T_17") {
+    alpha_vec2 <- append(alpha_vec2, 1)
+  }
+  else 
+    alpha_vec2 <- append(alpha_vec2, 0.4)
+}
+
+gray5palette <- c("gray","gray", "blue","gray","red")
+gray5Plot <- ggplot(as.data.frame(colData(reduced)),
+                   aes(x = dc1,
+                       y = dc2, color = Cluster)) + geom_point(alpha = alpha_vec2) + theme_classic() +
+  xlab("DC1") + ylab("DC2") + scale_colour_manual(values=gray5palette) + geom_abline()
+  ggtitle("Destiny DC Plot by Cluster")
+
+gray5Plot
+
+# function to get bin lines
+plotBinLines <- function(plot, bins) {
+  binCD4_ss <- cut(CD4_ss$dc1, breaks=bins)
+  binChange <- str_replace_all(binCD4_ss, pattern = ".*,([^-]*)]*", replacement = "\\1")
+  binChange2 <- gsub(']','',binChange)
+  binChange2 <- sort(as.numeric(unique(binChange2)))
+  dif <- binChange2[2] -binChange2[1]
+  
+  bin20plot <- plot + geom_vline(xintercept = c(unique(binChange2),binChange2[1]-dif))
+  return(bin20plot)
+}
+
+# plot of bin lines
+binPlot <- plotBinLines(grayPlot,10)
+
+# get bins then create to Seurat object
+binCD4_ss <- cut(CD4_ss$dc1, breaks=10, labels=c(1:10))
+CD4_ss$Bins <- binCD4_ss
+
+newSrt <- as.Seurat(CD4_ss)
+
+# setting ident to cluster, but will later set it to bin and cluster together 
+newSrt <- SetIdent(newSrt, value=newSrt@meta.data$Cluster)
+newSrt <- SetIdent(newSrt, value = newSrt@meta.data$Bins)
+
+# scaling data (for heatmap later)
+all.genes <- rownames(newSrt)
+newSrt <- ScaleData(newSrt, features = all.genes)
+genes <- rownames(newSrt@assays$RNA@counts)
+newSrt <- ScaleData(newSrt, assay = 'RNA', features = genes)
+
+exTregBinsDE <- function(Srt) {
+  l <- list()
+  for (i in 1:7) {
+    print(i)
+    l[[i]] <- FindMarkers(subset(x = Srt, Cluster == 'CD4T_7'), ident.1 =i,indent.2=c(8,9,10), min.pct=0, logfc.threshold = 0)
+  }
+  return(l)
+}
+
+#Cluster 7 DE of each bin vs exTreg cluster on the right (Bins 8,9,10)
+binsList <- exTregBinsDE(newSrt)
+
+#Cluster 7 DE of each bin vs all other bins
+allBins <- FindAllMarkers(subset(x = newSrt, Cluster == 'CD4T_7'), min.pct=0, logfc.threshold = 0)
+
+newSrt <- SetIdent(newSrt, value = newSrt@meta.data$Bins)
+FindAllMarkers(newSrt)
+
+#Cluster 7 DE Bins 1-7 vs Bins 8-10
+leftvsRight <- FindMarkers(subset(x = newSrt, Cluster == 'CD4T_7'), ident.1 =1:7,indent.2=c(8,9,10), min.pct=0, logfc.threshold = 0)
+
+# add bin and cluster together
+newSrt$binCluster <- str_c(newSrt$Cluster, "_Bin_",newSrt$Bins)
+counts <- data.frame(t(newSrt@assays$RNA@counts), newSrt$Cell_Index, newSrt$binCluster)
+
+# set it as ident 
+newSrt <- SetIdent(newSrt, value = newSrt@meta.data$binCluster)
+
+# finding DEs for each bin/cluster pairing
+binClustervsRest <- FindAllMarkers(newSrt, min.pct=0, logfc.threshold = 0,min.cells.feature = 0,min.cells.group = 0)
+
+frame <- as.data.frame(binClustervsRest)
+#subset for Clusters 7 and 9 
+
+
+DE.7.17 <- subset(binClustervsRest, cluster=='CD4T_7_Bin_1' | cluster== 'CD4T_7_Bin_2' |
+                    cluster=='CD4T_7_Bin_3' | cluster=='CD4T_7_Bin_4' | cluster== 'CD4T_7_Bin_5' |
+                    cluster=='CD4T_7_Bin_6' | cluster=='CD4T_7_Bin_7' | cluster== 'CD4T_7_Bin_8' |
+                    cluster=='CD4T_7_Bin_9' | cluster=='CD4T_7_Bin_10' | cluster== 'CD4T_17_Bin_1' |
+                    cluster=='CD4T_17_Bin_2' | cluster== 'CD4T_17_Bin_3' |
+                    cluster=='CD4T_17_Bin_4' | cluster== 'CD4T_17_Bin_7' |
+                    cluster=='CD4T_17_Bin_8' )
+
+
+df_bin <- subset(binClustervsRest, gene=="CD56"| gene=="CD16" |gene=="CD25")
+
+counts %>% group_by(newSrt$binCluster) %>% summarise_if(is.numeric, funs(sum)) -> countsBulk
+countsBulk <- rename(countsBulk, binCluster = 'newSrt$binCluster')
+countsBulk <- as.data.frame(countsBulk)
+
+
+countsBulk <- as.data.frame(t(countsBulk))
+countsBulk <- countsBulk %>% row_to_names(row_number = 1)
+
+bulkTreg <- subset(countsBulk[c(69:75,124:132)] )
+
+bulkTreg <- as.data.frame(t(bulkTreg))
+# convert this to numeric
+
+bulkTreg <- matrix(as.numeric(bulkTreg), ncol = ncol(bulkTreg))
+
+# converts dataframe to numeric
+convert_Numeric <- function(df) {
+  newDf <- df
+  for (i in colnames(df)) {
+    #print(df[i])
+    int <- df[i]
+    newDf[i] <- as.numeric(unlist(int))
+  }
+  return(newDf)
+}
+
+numBulkTreg <- convert_Numeric(bulkTreg)
+
+longform <- numBulkTreg %>% rownames_to_column() %>% gather(colname, value, -rowname)
+
+ggplot(longform, aes(x = rowname, y = colname, fill = value)) +
+  geom_tile() + theme(axis.text=element_text(size=4.5),
+                      axis.title=element_text(size=1))
+
+# from counts dataframe, create a bulk from bin and cluster info (use 'fun; to specify function to create bulk)
+bulkTransform <- function(counts, newSrt, fun) {
+  counts %>% group_by(newSrt$binCluster) %>% summarise_if(is.numeric, funs(fun)) -> countsBulk
+  countsBulk <- rename(countsBulk, binCluster = 'newSrt$binCluster')
+  countsBulk <- as.data.frame(countsBulk)
+  
+  countsBulk <- as.data.frame(t(countsBulk))
+  countsBulk <- countsBulk %>% row_to_names(row_number = 1)
+  
+  bulkTreg <- subset(countsBulk[c(69:75,124:132)] )
+  
+  bulkTreg <- as.data.frame(t(bulkTreg))
+
+  numBulkTreg <- convert_Numeric(bulkTreg)
+  return(numBulkTreg)
+}
+
+meanTreg <- bulkTransform(counts, newSrt, mean)
+
+longform2 <- meanTreg %>% rownames_to_column() %>% gather(colname, value, -rowname)
+
+ggplot(longform2, aes(x = rowname, y = colname, fill = value)) +
+  geom_tile() + theme(axis.text=element_text(size=4.5),
+                      axis.title=element_text(size=4))
+
+TregBinsDE <- function(Srt) {
+  l <- list()
+  for (i in c(2,3,4,7,8,9)) {
+    print(i)
+    l[[i]] <- FindMarkers(subset(x = Srt, Cluster == 'CD4T_17'), ident.1 =i,indent.2=c(1), min.pct=0, logfc.threshold = 0)
+  }
+  return(l)
+}
+
+TregBins <- TregBinsDE(newSrt)
+
+# creating heatmap of DE markers from each bin/cluster
+
+binClustervsRest %>% 
+  group_by(cluster) %>% 
+  top_n(n = 10, wt = avg_log2FC) -> top10
+DoHeatmap(newSrt, features = top10$gene)
+
+# subset for just clusters 7 and 17 
+Cluster.7.17 <- subset(x = newSrt, idents = c('CD4T_7_Bin_1','CD4T_7_Bin_2', 
+                          'CD4T_7_Bin_3','CD4T_7_Bin_4'
+                      ,'CD4T_7_Bin_5','CD4T_7_Bin_6', 
+                         'CD4T_7_Bin_7', 'CD4T_7_Bin_8', 
+                         'CD4T_7_Bin_9', 'CD4T_17_Bin_1', 'CD4T_17_Bin_2',
+                         'CD4T_17_Bin_3',  'CD4T_17_Bin_4', 
+                         'CD4T_17_Bin_7', 'CD4T_17_Bin_8', 'CD4T_17_Bin_9', 
+                      'CD4T_7_Bin_10'))
+
+clusterLevels <- c('CD4T_7_Bin_1','CD4T_17_Bin_1','CD4T_7_Bin_2',
+                   'CD4T_17_Bin_2','CD4T_7_Bin_3','CD4T_17_Bin_3',
+                   'CD4T_7_Bin_4', 'CD4T_17_Bin_4', 'CD4T_7_Bin_5',
+                   'CD4T_7_Bin_6', 'CD4T_7_Bin_7','CD4T_17_Bin_7',
+                   'CD4T_7_Bin_8', 'CD4T_17_Bin_8','CD4T_7_Bin_9', 
+                   'CD4T_17_Bin_9', 'CD4T_7_Bin_10')
+
+Cluster.7.17@active.ident <- factor(x=Cluster.7.17@active.ident, levels = clusterLevels)
+Cluster.7.17@active.assay <- 'ADT'
+
+DoHeatmap(Cluster.7.17, features = top10$gene, angle = 90, size = 1.5)
+
+
+smallerCluster <- subset(x = Cluster.7.17, idents = c('CD4T_7_Bin_1', 'CD4T_7_Bin_2', 
+                                                'CD4T_7_Bin_3','CD4T_7_Bin_4'
+                                                ,'CD4T_7_Bin_5','CD4T_7_Bin_6', 
+                                                'CD4T_7_Bin_7', 'CD4T_7_Bin_8', 
+                                                'CD4T_7_Bin_9', 'CD4T_7_Bin_10','CD4T_17_Bin_1', 'CD4T_17_Bin_2',
+                                                'CD4T_17_Bin_3'))
+
+
+DoHeatmap(smallerCluster, features = top10$gene, angle = 90, size = 2)
+
+
+tregCluster <- subset(x = Cluster.7.17, idents = c('CD4T_17_Bin_1','CD4T_17_Bin_2',
+                                               'CD4T_17_Bin_3',  'CD4T_17_Bin_4', 
+                                               'CD4T_17_Bin_7', 'CD4T_17_Bin_8', 'CD4T_17_Bin_9'))
+
+DoHeatmap(tregCluster, features = top10$gene, angle = 90, size = 2)
+
+tregClusterminus <- subset(x = Cluster.7.17, idents = c('CD4T_17_Bin_2',
+                                             'CD4T_17_Bin_3',  'CD4T_17_Bin_4', 
+                                             'CD4T_17_Bin_7', 'CD4T_17_Bin_8', 'CD4T_17_Bin_9'))
+
+DoHeatmap(tregClusterminus, features = top10$gene,size = 2)
+
+exTregCluster <- subset(x = Cluster.7.17, idents = c('CD4T_7_Bin_1','CD4T_7_Bin_2', 
+                                               'CD4T_7_Bin_3','CD4T_7_Bin_4'
+                                               ,'CD4T_7_Bin_5','CD4T_7_Bin_6', 
+                                               'CD4T_7_Bin_7', 'CD4T_7_Bin_8', 
+                                               'CD4T_7_Bin_9', 'CD4T_7_Bin_10'))
+DoHeatmap(exTregCluster, features = top10$gene, size = 2)
+
+
+# Create Pseudobulk/ heatmap from Sujit's way (standard Ley workflow)
+
+norm_df <- as.data.frame(newSrt@assays$ADT@data) %>% t()
+norm_meta <- newSrt@meta.data %>% select(binCluster)
+norm_merge <- merge(norm_df, norm_meta, by=0)
+norm_avg <- norm_merge %>% group_by(binCluster) %>% summarise_all(funs(mean)) %>% data.table()
+norm_avg$Row.names <- NULL
+norm_avg$binCluster <- gsub('CD4T','C',norm_avg$binCluster)
+norm_avg <- norm_avg %>% t()
+norm_avg <- norm_avg %>% row_to_names(row_number = 1)
+
+write.csv(norm_avg,'AntoineGSEA/AntoineBinClusterMatrix.csv')
+
+normScaled <- CreateSeuratObject(norm_avg)
+data <- as.data.frame(t(as.matrix(GetAssayData(normScaled))))
+scale_limits <- c(-2,2)
+scaled_data <- data.frame(lapply(data,function(x)rescale(x,to=scale_limits)))
+rownames(scaled_data) <-  rownames(data)
+scaled_data <- t(scaled_data)
+normScaled@assays$RNA@scale.data <- scaled_data
+normScaled = as.matrix(normScaled@assays$RNA@scale.data)
+
+pal_cols <- colorRampPalette(c("blue","yellow","red"))
+
+normScaled <- as.data.frame(normScaled)
+
+clusters <- c('C_7_Bin_1','C_7_Bin_2', 
+              'C_7_Bin_3','C_7_Bin_4'
+              ,'C_7_Bin_5','C_7_Bin_6', 
+              'C_7_Bin_7', 'C_7_Bin_8', 
+              'C_7_Bin_9', 
+              'C_7_Bin_10', 'C_17_Bin_1', 'C_17_Bin_2',
+              'C_17_Bin_3',  'C_17_Bin_4', 
+              'C_17_Bin_7', 'C_17_Bin_8', 'C_17_Bin_9')
+scaled.7.17 <- normScaled[co_1]
+
+newnames_row <- lapply(
+  rownames(scaled.7.17) ,
+  function(x) bquote(bold(.(x))))
+
+newnames_cols <- lapply(
+  colnames(scaled.7.17),
+  function(x) bquote(bold(.(x))))
+
+pheatmap::pheatmap(scaled.7.17, color = pal_cols(100), cluster_rows = FALSE,
+                   main = "Scaled Heatmap for Cluster 7 and 17 Bulk Marker Expression, by Bin", fontsize = 10, fontsize_col = 10, fontsize_row = 10, fontsize_number=10, 
+                   labels_row = as.expression(newnames_row),
+                   labels_col = as.expression(newnames_cols))
+
+scaled.7.17 <- as.matrix(scaled.7.17)
+
+y = Heatmap(scaled.7.17, column_order = co_1, cluster_rows=T)
+g <- column_order(y)
+h <- row_order(y)
+
+y = Heatmap(scaled.7.17, column_order = clusters, cluster_rows=T)
+
+# Now for genes
+
+binClusterGenes <- FindAllMarkers(newSrt, assay = "RNA",min.pct=0, logfc.threshold = 0,min.cells.feature = 0,min.cells.group = 0)
+
+
+# filter for only the DEGs for the clusters we are interested in
+
+binClusterDF <- as.data.frame(binClusterGenes)
+
+filtered <- binClusterDF[(binClusterDF$cluster=='CD4T_7_Bin_1' |
+                            binClusterDF$cluster=='CD4T_7_Bin_2' |
+                            binClusterDF$cluster=='CD4T_7_Bin_3' |
+                            binClusterDF$cluster=='CD4T_7_Bin_4' |
+                            binClusterDF$cluster=='CD4T_7_Bin_5' |
+                            binClusterDF$cluster=='CD4T_7_Bin_6' |
+                            binClusterDF$cluster=='CD4T_7_Bin_7' |
+                            binClusterDF$cluster=='CD4T_7_Bin_8' |
+                            binClusterDF$cluster=='CD4T_7_Bin_9' |
+                            binClusterDF$cluster=='CD4T_7_Bin_10' |
+                            binClusterDF$cluster=='CD4T_17_Bin_1' |
+                            binClusterDF$cluster=='CD4T_17_Bin_2' |
+                            binClusterDF$cluster=='CD4T_17_Bin_3' |
+                            binClusterDF$cluster=='CD4T_17_Bin_4' |
+                            binClusterDF$cluster=='CD4T_17_Bin_7' |
+                            binClusterDF$cluster=='CD4T_17_Bin_8' |
+                            binClusterDF$cluster=='CD4T_17_Bin_9'),]
+
+filtered %>% 
+  group_by(cluster) %>% 
+  top_n(n = 15, wt = avg_log2FC) -> topgenes
+
+DefaultAssay(Cluster.7.17) <- 'RNA'
+
+# all of cluster 7 and 17
+DoHeatmap(Cluster.7.17, features = topgenes$gene, angle = 90, size = 2) +
+  theme(text=element_text(size = 7), legend.text = element_text(size = 10))
+
+DefaultAssay(exTregCluster) <- 'RNA'
+# all of cluster 7
+DoHeatmap(exTregCluster, features = topgenes$gene, angle = 90, size = 2) +
+  theme(text=element_text(size = 7), legend.text = element_text(size = 10))
+
+DefaultAssay(tregCluster) <- 'RNA'
+# cluster 17 
+DoHeatmap(tregCluster, features = topgenes$gene, angle = 90, size = 2) + 
+  theme(text=element_text(size = 7), legend.text = element_text(size = 10))
+
+DefaultAssay(tregClusterminus) <- 'RNA'
+# cluster 17 minus bin 1
+DoHeatmap(tregClusterminus, features = topgenes$gene,size = 2) +
+  theme(text=element_text(size = 7), legend.text = element_text(size = 10))
+
+# make heatmap for gene expression data
+
+gene_df <- as.data.frame(newSrt@assays$RNA@data) %>% t()
+gene_meta <- newSrt@meta.data %>% select(binCluster)
+gene_merge <- merge(gene_df, gene_meta, by=0)
+gene_avg <- gene_merge %>% group_by(binCluster) %>% summarise_all(funs(mean)) %>% data.table()
+gene_avg$Row.names <- NULL
+gene_avg$binCluster <- gsub('CD4T','C',gene_avg$binCluster)
+gene_avg <- gene_avg %>% t()
+gene_avg <- gene_avg %>% row_to_names(row_number = 1)
+
+write.csv(norm_avg,'AntoineGSEA/AntoineBinClusterMatrixGenes.csv')
+
+geneScaled <- CreateSeuratObject(gene_avg)
+genedata <- as.data.frame(t(as.matrix(GetAssayData(geneScaled))))
+scale_limits <- c(-2,2)
+scaled_gene <- data.frame(lapply(genedata,function(x)rescale(x,to=scale_limits)))
+rownames(scaled_gene) <-  rownames(genedata)
+scaled_gene <- t(scaled_gene)
+geneScaled@assays$RNA@scale.data <- scaled_gene
+geneScaled = as.matrix(geneScaled@assays$RNA@scale.data)
+
+pal_cols <- colorRampPalette(c("blue","yellow","red"))
+
+geneScaled <- as.data.frame(geneScaled)
+
+clusters <- c('C_7_Bin_1','C_7_Bin_2', 
+              'C_7_Bin_3','C_7_Bin_4'
+              ,'C_7_Bin_5','C_7_Bin_6', 
+              'C_7_Bin_7', 'C_7_Bin_8', 
+              'C_7_Bin_9', 'C_17_Bin_1', 'C_17_Bin_2',
+              'C_17_Bin_3',  'C_17_Bin_4', 
+              'C_17_Bin_7', 'C_17_Bin_8', 'C_17_Bin_9', 
+              'C_7_Bin_10')
+scaled.7.17 <- geneScaled[clusters]
+
+newnames_row1 <- lapply(
+  rownames(scaled.7.17) ,
+  function(x) bquote(bold(.(x))))
+
+newnames_cols1 <- lapply(
+  colnames(scaled.7.17),
+  function(x) bquote(bold(.(x))))
+
+pheatmap::pheatmap(scaled.7.17, color = pal_cols(100), cluster_rows = FALSE, 
+                   main = "Scaled Heatmap for Cluster 7 and 17 Bulk Transcriptome, by Bin", 
+                   fontsize = 10, fontsize_col = 10, fontsize_row = 2, fontsize_number=2, 
+                   show_rownames = T, 
+                   labels_row = as.expression(newnames_row1),
+                   labels_col = as.expression(newnames_cols1))
+
+Heatmap(scaled.7.17, column_order = co_1, cluster_rows=T, show_row_names = F,
+        row_names_gp = gpar(fontsize=6))
+
+scaledDown <- scaled.7.17[row.names(scaled.7.17) %in% topgenes$gene,]
+
+newnames_row <- lapply(
+  rownames(scaledDown) ,
+  function(x) bquote(bold(.(x))))
+
+newnames_cols <- lapply(
+  colnames(scaledDown),
+  function(x) bquote(bold(.(x))))
+
+pheatmap::pheatmap(scaledDown, color = pal_cols(100), cluster_rows = FALSE, 
+                   main = "Scaled Heatmap for Cluster 7 and 17 Bulk Transcriptome, by Bin", 
+                   fontsize = 10, fontsize_col = 10, fontsize_row = 5.5, fontsize_number=2, 
+                   labels_row = as.expression(newnames_row),
+                   labels_col = as.expression(newnames_cols))
+
+scaledDown <- as.matrix(scaledDown)
+
+Heatmap(scaledDown, cluster_columns=T, cluster_rows=T, 
+            row_names_gp = gpar(fontsize=6))
+g <- column_order(y)
+h <- row_order(y)
+
+co_1 <- c('C_7_Bin_1','C_17_Bin_1','C_7_Bin_2',
+          'C_17_Bin_2','C_7_Bin_3','C_17_Bin_3',
+          'C_7_Bin_4', 'C_17_Bin_4', 'C_7_Bin_5',
+          'C_7_Bin_6', 'C_7_Bin_7','C_17_Bin_7',
+          'C_7_Bin_8', 'C_17_Bin_8','C_7_Bin_9', 
+          'C_17_Bin_9', 'C_7_Bin_10')
+
+Heatmap(scaledDown, column_order = co_1, cluster_rows=T, 
+        row_names_gp = gpar(fontsize=6))
+
+
+
+
+
